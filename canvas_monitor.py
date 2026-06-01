@@ -78,14 +78,18 @@ def notify_ntfy(title: str, message: str) -> bool:
     if not topic:
         return False
     try:
+        # Use ntfy's JSON publish API so UTF-8 in the title (emoji, accents,
+        # non-Latin scripts) is handled correctly. The simpler header-based
+        # API requires ASCII-only header values and chokes on emoji.
         httpx.post(
-            f"https://ntfy.sh/{topic}",
-            data=message.encode("utf-8"),
-            headers={
-                "Title": title,
-                "Priority": "urgent",  # high-priority push, bypasses Do Not Disturb on most setups
-                "Tags": "house,rotating_light",
-                "Click": URL,
+            "https://ntfy.sh/",
+            json={
+                "topic": topic,
+                "title": title,
+                "message": message,
+                "priority": "urgent",  # bypasses Do Not Disturb on most setups
+                "tags": ["house", "rotating_light"],
+                "click": URL,
             },
             timeout=15,
         ).raise_for_status()
