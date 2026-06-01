@@ -87,7 +87,7 @@ def notify_ntfy(title: str, message: str) -> bool:
                 "topic": topic,
                 "title": title,
                 "message": message,
-                "priority": "urgent",  # bypasses Do Not Disturb on most setups
+                "priority": 5,  # bypasses Do Not Disturb on most setups
                 "tags": ["house", "rotating_light"],
                 "click": URL,
             },
