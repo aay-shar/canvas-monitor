@@ -24,8 +24,8 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 
-URL = "https://www.canvasutrecht.com/floorplans.aspx"
-SOLD_OUT_PHRASE = "at this moment there are no apartments available"
+URL = "https://canvas-student.securerc.co.uk/onlineleasing/canvas-utrecht/floorplans.aspx"
+SOLD_OUT_PHRASE = "apartments will appear on this page as soon as they become available"
 STATE_FILE = Path(__file__).parent / "state.txt"
 
 # Note on User-Agent: an honest identifying UA (e.g. "CanvasMonitor/1.0")
