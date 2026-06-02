@@ -52,11 +52,18 @@ class PageState:
 
 
 def fetch_page() -> str:
-    headers = {"User-Agent": USER_AGENT, "Accept-Language": "en"}
-    with httpx.Client(timeout=30, follow_redirects=True, headers=headers) as client:
-        r = client.get(URL)
-        r.raise_for_status()
-        return r.text
+    # Use curl_cffi to impersonate Chrome's TLS/JA3 + HTTP/2 fingerprint.
+    # RENTCafé's WAF inspects the TLS handshake signature, not just the
+    # User-Agent header, so plain httpx/requests get a 403.
+    from curl_cffi import requests as curl_requests
+    r = curl_requests.get(
+        URL,
+        impersonate="chrome",
+        timeout=30,
+        headers={"Referer": "https://www.canvasutrecht.com/"},
+    )
+    r.raise_for_status()
+    return r.text
 
 
 def analyze(html: str) -> PageState:
