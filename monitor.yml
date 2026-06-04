@@ -1,0 +1,74 @@
+name: Student Housing Monitor
+
+on:
+  schedule:
+    # Every 5 minutes — GitHub's hard minimum for scheduled workflows.
+    # Real-world latency is often 5–30 min under load, sometimes worse.
+    # For true 1-min latency, use the local runner (see README.md).
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test notification only"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write  # needed to commit state.txt back to the repo
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: housing-monitor
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Run Canvas monitor
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        # continue-on-error so a Canvas blip doesn't prevent FIZZ from running
+        continue-on-error: true
+        run: |
+          if [ "${{ github.event.inputs.test }}" = "true" ]; then
+            python canvas_monitor.py --test
+          else
+            python canvas_monitor.py
+          fi
+
+      - name: Run FIZZ monitor
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        continue-on-error: true
+        run: |
+          if [ "${{ github.event.inputs.test }}" = "true" ]; then
+            python fizz_monitor.py --test
+          else
+            python fizz_monitor.py
+          fi
+
+      - name: Commit updated state
+        if: github.event.inputs.test != 'true'
+        run: |
+          # Stage whatever state files exist; ignore failures if a file is missing.
+          git add state.txt state_fizz.txt 2>/dev/null || true
+          if git diff --staged --quiet 2>/dev/null; then
+            echo "No state changes."
+          else
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: update monitor state [skip ci]"
+            git push
+          fi
